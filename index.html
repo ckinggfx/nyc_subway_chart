@@ -52,6 +52,11 @@ body{background:var(--color-bg);color:var(--color-fg);font-family:var(--font-ant
 .sw-meet td .sw-chip{margin-right:6px;vertical-align:middle}
 .sw-meet .same{color:var(--color-ok);font-weight:var(--cds-font-weight-medium)}
 .sw-meetwrap{max-height:26rem;overflow:auto}
+.sw-mh{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sw-mh[hidden]{display:none}
+.sw-mh-chip{display:inline-flex}
+.sw-meet tbody tr.same-row{background:color-mix(in srgb, var(--color-ok) 13%, var(--color-panel))}
+.sw-meet tbody tr.same-row:hover{background:color-mix(in srgb, var(--color-ok) 22%, var(--color-panel))}
 .sw-showing{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
 .sw-chips{display:inline-flex;flex-wrap:wrap;gap:4px}
 .sw-one .sw-stops{columns:15rem;column-gap:var(--cds-gap-lg);max-height:none}
@@ -154,8 +159,8 @@ table.sw-table{width:100%;border-collapse:collapse;font-size:var(--cds-font-size
     <div class="sw-meetwrap">
       <table class="sw-table sw-meet" data-source="meetups" data-row-key="pair,id_b">
         <thead><tr>
-          <th data-field="station_a">Station on one line</th>
-          <th data-field="station_b">Station on the other</th>
+          <th data-field="station_a"><span class="sw-mh" data-mh="two">Meetup Stations on the <span class="sw-mh-chip" data-draw="meethead" data-k="a" data-source="meetups"></span></span><span data-mh="many" hidden>Meetup Stations on one line</span></th>
+          <th data-field="station_b"><span class="sw-mh" data-mh="two">Meetup Stations on the <span class="sw-mh-chip" data-draw="meethead" data-k="b" data-source="meetups"></span></span><span data-mh="many" hidden>Meetup Stations on the other line</span></th>
           <th data-field="walk_min" class="num">Walk</th>
           <th data-field="borough" class="opt">Borough</th>
         </tr></thead>
@@ -646,11 +651,18 @@ dash.calc('meetups', {
     const M = dash.data('meetups');
     el.textContent = M.status === 'ok' ? fc(meetRows().length) : '—';
   });
+  dash.draw('meethead', (el) => {
+    const byId = linesById(), first = meetRows()[0];
+    const pair = first ? [first.line_a, first.line_b] : [...selSet()].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
+    const id = el.dataset.k === 'a' ? pair[0] : pair[1], o = byId.get(id);
+    el.replaceChildren(...(o ? [chip(o.line, o.color)] : []));
+  });
   dash.draw('meet', (tb) => {
     const byId = linesById(), rows = meetRows();
     tb.replaceChildren(...rows.map((r) => {
       const tr = document.createElement('tr');
       tr.dataset.key = encodeURIComponent(r.pair) + ',' + encodeURIComponent(r.id_b);
+      if (r.same) tr.className = 'same-row';
       const cell = (line, name) => {
         const td = document.createElement('td'); const o = byId.get(line);
         if (o) td.appendChild(chip(line, o.color, true));
@@ -681,6 +693,7 @@ dash.calc('meetups', {
     root.querySelectorAll('.sw-only').forEach((b) => { b.hidden = selSet().size < 2; });
     root.querySelectorAll('.sw-boro-toggle').forEach((c) => { c.checked = dash.params().boro_hl !== false; });
     root.querySelectorAll('#meetups').forEach((m) => { m.hidden = selSet().size < 2; });
+    root.querySelectorAll('[data-mh]').forEach((h) => { h.hidden = (h.dataset.mh === 'two') !== (selSet().size === 2); });
   });
   root.querySelectorAll('.sw-boro-toggle').forEach((c) => c.addEventListener('change', () => dash.setParams({boro_hl: c.checked})));
   root.querySelectorAll('.sw-only').forEach((b) => b.addEventListener('click', () => dash.setParams({lines: [selected()]})));
